@@ -222,7 +222,13 @@
     "description": "DeepSeek AI assistant, supports deep thinking and web search",
     "userToken": "User Token",
     "userTokenPlaceholder": "Enter DeepSeek User Token",
-    "userTokenHelp": "Authentication Token from DeepSeek web version, found in browser DevTools Application -> Local Storage"
+    "userTokenHelp": "Authentication Token from DeepSeek web version, found in browser DevTools Application -> Local Storage",
+    "models": {
+      "DeepSeek-V3.2": "DeepSeek V3.2 - Standard Chat",
+      "DeepSeek-Search": "DeepSeek Search - Web Search",
+      "DeepSeek-R1": "DeepSeek R1 - Deep Thinking",
+      "DeepSeek-R1-Search": "DeepSeek R1 Search - Web Search + Thinking"
+    }
   },
   "glm": {
     "name": "GLM",

@@ -142,11 +142,26 @@ export class LoadBalancer {
       return normalizedSupported === normalizedModel
     })
     
-    if (!supported) {
-      console.log(`[LoadBalancer] Provider ${provider.name} does not support model ${model}, supported models:`, provider.supportedModels)
+    if (supported) {
+      return true
+    }
+
+    // Check if model is in provider's model mappings
+    if (provider.modelMappings && provider.modelMappings[model]) {
+      console.log(`[LoadBalancer] Model "${model}" found in provider model mappings`)
+      return true
+    }
+
+    // Check global model mappings
+    const config = storeManager.getConfig()
+    const globalMapping = config.modelMappings[model]
+    if (globalMapping && (!globalMapping.preferredProviderId || globalMapping.preferredProviderId === provider.id)) {
+      console.log(`[LoadBalancer] Model "${model}" found in global model mappings for provider ${provider.name}`)
+      return true
     }
     
-    return supported
+    console.log(`[LoadBalancer] Provider ${provider.name} does not support model ${model}, supported models:`, provider.supportedModels)
+    return false
   }
 
   /**

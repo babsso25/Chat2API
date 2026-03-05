@@ -83,6 +83,25 @@ router.post('/completions', async (ctx: Context) => {
     return
   }
 
+  // Read feature parameters from Headers (lower priority than request body)
+  const webSearchFromHeader = ctx.headers['x-web-search'] === 'true'
+  const reasoningEffortFromHeader = ctx.headers['x-reasoning-effort'] as 'low' | 'medium' | 'high' | undefined
+  const deepResearchFromHeader = ctx.headers['x-deep-research'] === 'true'
+
+  // Merge into request (request body parameters take priority)
+  if (webSearchFromHeader && request.web_search === undefined) {
+    request.web_search = true
+    console.log('[Chat] Web search enabled via X-Web-Search header')
+  }
+  if (reasoningEffortFromHeader && request.reasoning_effort === undefined) {
+    request.reasoning_effort = reasoningEffortFromHeader
+    console.log('[Chat] Reasoning effort set via X-Reasoning-Effort header:', reasoningEffortFromHeader)
+  }
+  if (deepResearchFromHeader && request.deep_research === undefined) {
+    request.deep_research = true
+    console.log('[Chat] Deep research enabled via X-Deep-Research header')
+  }
+
   const config = storeManager.getConfig()
   const preferredProviderId = modelMapper.getPreferredProvider(request.model)
   const preferredAccountId = modelMapper.getPreferredAccount(request.model)

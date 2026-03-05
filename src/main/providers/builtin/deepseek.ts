@@ -30,9 +30,15 @@ export const deepseekConfig: BuiltinProviderConfig = {
   description: 'DeepSeek AI assistant, supports deep thinking and web search',
   supportedModels: [
     'DeepSeek-V3.2',
+    'DeepSeek-Search',
+    'DeepSeek-R1',
+    'DeepSeek-R1-Search',
   ],
   modelMappings: {
     'DeepSeek-V3.2': 'deepseek-chat',
+    'DeepSeek-Search': 'deepseek-chat',
+    'DeepSeek-R1': 'deepseek-chat',
+    'DeepSeek-R1-Search': 'deepseek-chat',
   },
   credentialFields: [
     {

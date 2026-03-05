@@ -337,10 +337,12 @@ export class RequestForwarder {
 
       const adapter = new DeepSeekAdapter(provider, account)
       const { response, sessionId } = await adapter.chatCompletion({
-        model: actualModel,
+        model: request.model,
         messages: transformedRequest.messages as any,
         stream: transformedRequest.stream,
         temperature: transformedRequest.temperature,
+        web_search: transformedRequest.web_search,
+        reasoning_effort: transformedRequest.reasoning_effort,
       })
 
       const latency = Date.now() - startTime

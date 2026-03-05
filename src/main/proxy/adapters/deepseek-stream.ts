@@ -118,10 +118,51 @@ export class DeepSeekStreamHandler {
       this.messageId = chunk.response_message_id
     }
 
+    const previousPath = this.currentPath
+
     if (chunk.v && typeof chunk.v === 'object' && chunk.v.response) {
-      this.currentPath = chunk.v.response.thinking_enabled ? 'thinking' : 'content'
+      const isThinkingNow = chunk.v.response.thinking_enabled
+      this.currentPath = isThinkingNow ? 'thinking' : 'content'
+      
+      const fragments = chunk.v.response.fragments
+      if (Array.isArray(fragments) && fragments.length > 0) {
+        for (const fragment of fragments) {
+          if (fragment.content) {
+            const fragmentType = fragment.type
+            const fragmentContent = fragment.content
+            
+            if (fragmentType === 'THINK') {
+              this.sendContent(fragmentContent, 'thinking', transStream, isSilentModel, isFoldModel, isSearchSilentModel)
+            } else if (fragmentType === 'ANSWER' || fragmentType === 'RESPONSE') {
+              this.sendContent(fragmentContent, 'content', transStream, isSilentModel, isFoldModel, isSearchSilentModel)
+            }
+          }
+        }
+      }
     } else if (chunk.p === 'response/fragments') {
       this.currentPath = 'content'
+      
+      if (Array.isArray(chunk.v)) {
+        for (const fragment of chunk.v) {
+          if (fragment.content) {
+            const fragmentType = fragment.type
+            const fragmentContent = fragment.content
+            
+            if (fragmentType === 'THINK') {
+              this.sendContent(fragmentContent, 'thinking', transStream, isSilentModel, isFoldModel, isSearchSilentModel)
+            } else if (fragmentType === 'ANSWER' || fragmentType === 'RESPONSE') {
+              this.sendContent(fragmentContent, 'content', transStream, isSilentModel, isFoldModel, isSearchSilentModel)
+            }
+          }
+        }
+      }
+    } else if (chunk.p === 'response' && Array.isArray(chunk.v)) {
+      const hasThinking = chunk.v.some((e: any) => 
+        e.p === 'response' && e.v && typeof e.v === 'object' && e.v.thinking_enabled === true
+      )
+      if (hasThinking) {
+        this.currentPath = 'thinking'
+      }
     }
 
     if (chunk.p === 'response/search_status') return
@@ -167,63 +208,49 @@ export class DeepSeekStreamHandler {
 
     if (!content) return
 
+    this.sendContent(content, this.currentPath, transStream, isSilentModel, isFoldModel, isSearchSilentModel)
+  }
+
+  private sendContent(
+    content: string,
+    path: string,
+    transStream: PassThrough,
+    isSilentModel: boolean,
+    isFoldModel: boolean,
+    isSearchSilentModel: boolean
+  ): void {
     const cleanedValue = content.replace(/FINISHED/g, '')
     const processedContent = isSearchSilentModel
       ? cleanedValue.replace(/\[citation:(\d+)\]/g, '')
       : cleanedValue.replace(/\[citation:(\d+)\]/g, '[$1]')
 
-    // Process tool call interception for content
-    if (this.currentPath === 'content' || !this.currentPath) {
-      const baseChunk = createBaseChunk(`${this.sessionId}@${this.messageId}`, this.model, this.created)
-      const { chunks: outputChunks, shouldFlush } = processStreamContent(
-        processedContent, 
-        this.toolCallState, 
-        baseChunk, 
-        this.isFirstChunk,
-        'deepseek'
-      )
-
-      for (const outChunk of outputChunks) {
-        transStream.write(`data: ${JSON.stringify(outChunk)}\n\n`)
-        this.isFirstChunk = false
-      }
-
-      // If we are buffering a potential tool call, don't send any content
-      // Return to wait for more content
-      if (this.toolCallState.isBufferingToolCall) {
-        return
-      }
-      
-      // If we already emitted tool calls, don't send any more content
-      if (this.toolCallState.hasEmittedToolCall) {
-        return
-      }
-      
-      // If processStreamContent already sent content, don't send again
-      if (outputChunks.length > 0) {
-        return
-      }
-    }
-
     const delta: { role?: string; content?: string; reasoning_content?: string } = {}
+    let shouldSendDelta = true
+
     if (this.isFirstChunk) {
       delta.role = 'assistant'
-      this.isFirstChunk = false
     }
 
-    if (this.currentPath === 'thinking') {
+    if (path === 'thinking') {
       if (isSilentModel) return
+
+      const filteredContent = processedContent.replace(/^(SEARCH|WEB_SEARCH|SEARCHING)\s*/i, '')
+
       if (isFoldModel) {
         if (!this.thinkingStarted) {
           this.thinkingStarted = true
-          delta.content = `<details><summary>Thinking Process</summary><pre>${processedContent}`
+          delta.content = `<details><summary>Thinking Process</summary><pre>${filteredContent}`
         } else {
-          delta.content = processedContent
+          delta.content = filteredContent
         }
       } else {
-        delta.reasoning_content = processedContent
+        if (filteredContent) {
+          delta.reasoning_content = filteredContent
+        } else {
+          shouldSendDelta = false
+        }
       }
-    } else if (this.currentPath === 'content') {
+    } else if (path === 'content') {
       if (isFoldModel && this.thinkingStarted) {
         delta.content = `</pre></details>${processedContent}`
         this.thinkingStarted = false
@@ -234,7 +261,10 @@ export class DeepSeekStreamHandler {
       delta.content = processedContent
     }
 
-    transStream.write(this.createChunk(delta))
+    if (shouldSendDelta && (delta.content !== undefined || delta.reasoning_content !== undefined)) {
+      transStream.write(this.createChunk(delta))
+      this.isFirstChunk = false
+    }
   }
 
   private handleDone(transStream: PassThrough, isFoldModel: boolean, isSearchSilentModel: boolean): void {
@@ -302,8 +332,51 @@ export class DeepSeekStreamHandler {
 
             if (parsed.v && typeof parsed.v === 'object' && parsed.v.response) {
               currentPath = parsed.v.response.thinking_enabled ? 'thinking' : 'content'
+              
+              const fragments = parsed.v.response.fragments
+              if (Array.isArray(fragments) && fragments.length > 0) {
+                for (const fragment of fragments) {
+                  if (fragment.content) {
+                    let cleanedFragment = fragment.content.replace(/FINISHED/g, '')
+                    if (fragment.type === 'THINK') {
+                      cleanedFragment = cleanedFragment.replace(/^(SEARCH|WEB_SEARCH|SEARCHING)\s*/i, '')
+                      accumulatedThinkingContent += cleanedFragment
+                    } else if (fragment.type === 'ANSWER' || fragment.type === 'RESPONSE') {
+                      accumulatedContent += cleanedFragment
+                    }
+                  }
+                }
+              }
             } else if (parsed.p === 'response/fragments') {
               currentPath = 'content'
+              
+              if (Array.isArray(parsed.v)) {
+                for (const fragment of parsed.v) {
+                  if (fragment.content) {
+                    let cleanedFragment = fragment.content.replace(/FINISHED/g, '')
+                    if (fragment.type === 'THINK') {
+                      cleanedFragment = cleanedFragment.replace(/^(SEARCH|WEB_SEARCH|SEARCHING)\s*/i, '')
+                      accumulatedThinkingContent += cleanedFragment
+                    } else if (fragment.type === 'ANSWER' || fragment.type === 'RESPONSE') {
+                      accumulatedContent += cleanedFragment
+                    }
+                  }
+                }
+              }
+            } else if (parsed.p === 'response' && Array.isArray(parsed.v)) {
+              const hasThinking = parsed.v.some((e: any) => 
+                e.p === 'response' && e.v && typeof e.v === 'object' && e.v.thinking_enabled === true
+              )
+              if (hasThinking) {
+                currentPath = 'thinking'
+              }
+            }
+
+            if (!currentPath) {
+              // Default to thinking for thinking models
+              if (parsed.v && typeof parsed.v === 'string') {
+                currentPath = 'thinking'
+              }
             }
 
             if (typeof parsed.v === 'object' && Array.isArray(parsed.v)) {
@@ -312,8 +385,9 @@ export class DeepSeekStreamHandler {
                   accumulatedTokenUsage = e.v
                 }
                 if (Array.isArray(e.v)) {
-                  const cleanedValue = e.v.map((v: any) => v.content).join('').replace(/FINISHED/g, '')
+                  let cleanedValue = e.v.map((v: any) => v.content).join('').replace(/FINISHED/g, '')
                   if (currentPath === 'thinking') {
+                    cleanedValue = cleanedValue.replace(/^(SEARCH|WEB_SEARCH|SEARCHING)\s*/i, '')
                     accumulatedThinkingContent += cleanedValue
                   } else if (currentPath === 'content') {
                     accumulatedContent += cleanedValue
@@ -323,8 +397,9 @@ export class DeepSeekStreamHandler {
             }
 
             if (typeof parsed.v === 'string') {
-              const cleanedValue = parsed.v.replace(/FINISHED/g, '')
+              let cleanedValue = parsed.v.replace(/FINISHED/g, '')
               if (currentPath === 'thinking') {
+                cleanedValue = cleanedValue.replace(/^(SEARCH|WEB_SEARCH|SEARCHING)\s*/i, '')
                 accumulatedThinkingContent += cleanedValue
               } else if (currentPath === 'content') {
                 accumulatedContent += cleanedValue

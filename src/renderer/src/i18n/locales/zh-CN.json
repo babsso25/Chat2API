@@ -222,7 +222,13 @@
     "description": "DeepSeek 智能对话助手，支持深度思考和联网搜索",
     "userToken": "用户 Token",
     "userTokenPlaceholder": "请输入 DeepSeek 用户 Token",
-    "userTokenHelp": "从 DeepSeek 网页版获取的认证 Token，可在浏览器开发者工具 Application -> Local Storage 中找到"
+    "userTokenHelp": "从 DeepSeek 网页版获取的认证 Token，可在浏览器开发者工具 Application -> Local Storage 中找到",
+    "models": {
+      "DeepSeek-V3.2": "DeepSeek V3.2 - 标准对话",
+      "DeepSeek-Search": "DeepSeek Search - 联网搜索",
+      "DeepSeek-R1": "DeepSeek R1 - 深度思考",
+      "DeepSeek-R1-Search": "DeepSeek R1 Search - 联网+思考"
+    }
   },
   "glm": {
     "name": "GLM",

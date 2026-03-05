@@ -475,9 +475,17 @@ export const BUILTIN_PROVIDERS: BuiltinProviderConfig[] = [
     },
     enabled: true,
     description: 'DeepSeek intelligent dialogue assistant, supports deep thinking and web search',
-    supportedModels: ['DeepSeek-V3.2'],
+    supportedModels: [
+      'DeepSeek-V3.2',
+      'DeepSeek-Search',
+      'DeepSeek-R1',
+      'DeepSeek-R1-Search',
+    ],
     modelMappings: {
       'DeepSeek-V3.2': 'deepseek-chat',
+      'DeepSeek-Search': 'deepseek-chat',
+      'DeepSeek-R1': 'deepseek-chat',
+      'DeepSeek-R1-Search': 'deepseek-chat',
     },
     credentialFields: [
       {
